@@ -532,7 +532,11 @@ int SetHandler::readAndScoreOSW(std::string inputFN_,
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
   }
 
-  select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID;";
+  // Peak group-level query
+  // select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID;";
+
+  // Peak group-level query including peptide sequence
+  select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
 
   // Execute SQL select statement
   sqlite3_prepare(db, select_sql.c_str(), -1, &stmt, NULL);
@@ -569,6 +573,11 @@ int SetHandler::readAndScoreOSW(std::string inputFN_,
       if (string(sqlite3_column_name( stmt, i )) == "FEATURE_ID")
       {
         myPsm->scan = sqlite3_column_int( stmt, i );
+      }
+      if (string(sqlite3_column_name( stmt, i )) == "MODIFIED_SEQUENCE")
+      {
+        std::cout << std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))) << std::endl;
+        myPsm->peptide = std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i )));
       }
       if (string(sqlite3_column_name( stmt, i )) == "DECOY")
       {
