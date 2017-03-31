@@ -28,7 +28,7 @@
 using namespace std;
 
 Caller::Caller() :
-    pNorm_(NULL), pCheck_(NULL), protEstimator_(NULL), tabInput_(true), 
+    pNorm_(NULL), pCheck_(NULL), protEstimator_(NULL), tabInput_(true), oswInput_(true), 
     readStdIn_(false), inputFN_(""), xmlSchemaValidation_(true), 
     tabOutputFN_(""), xmlOutputFN_(""), weightOutputFN_(""),
     psmResultFN_(""), peptideResultFN_(""), proteinResultFN_(""), 
@@ -159,6 +159,10 @@ bool Caller::parseOptions(int argc, char **argv) {
   cmd.defineOption("j",
       "tab-in [default]",
       "Input file given in pin-tab format. This is the default setting, flag only present for backwards compatibility.",
+      "filename");
+  cmd.defineOption("Q",
+      "osw-in",
+      "Input file given in osw format.",
       "filename");
   cmd.defineOption("k",
       "xml-in",
@@ -480,6 +484,14 @@ bool Caller::parseOptions(int argc, char **argv) {
     tabInput_ = false;
     inputFN_ = cmd.options["k"];
   }
+
+  if (cmd.optionSet("Q")) {
+    tabInput_ = false;
+    oswInput_ = true;
+    inputSearchType_ = "separate";
+    inputFN_ = cmd.options["Q"];
+    SanityCheck::setInitDefaultDirName("VAR_XCORR_SHAPE");
+  }
   
   if (cmd.optionSet("e")) {
     readStdIn_ = true;
@@ -595,7 +607,7 @@ bool Caller::parseOptions(int argc, char **argv) {
   }
   // if there are no arguments left...
   if (cmd.arguments.size() == 0) {
-    if(!cmd.optionSet("j") && !cmd.optionSet("k") && !cmd.optionSet("e") && !cmd.optionSet("")){ // unless the input comes from -j, -k or -e option
+    if(!cmd.optionSet("j") && !cmd.optionSet("k") && !cmd.optionSet("e") && !cmd.optionSet("Q") && !cmd.optionSet("")){ // unless the input comes from -j, -k or -e option
       cerr << "Error: too few arguments.";
       cerr << "\nInvoke with -h option for help\n";
       return 0; // ...error
@@ -781,7 +793,7 @@ int Caller::run() {
   int success = 0;
   std::ifstream fileStream;
   if (!readStdIn_) {
-    if (!tabInput_) fileStream.exceptions(ifstream::badbit | ifstream::failbit);
+    if (!tabInput_ && !oswInput_) fileStream.exceptions(ifstream::badbit | ifstream::failbit);
     fileStream.open(inputFN_.c_str(), ios::in);
   } else if (maxPSMs_ > 0u) {
     maxPSMs_ = 0u;
@@ -794,16 +806,21 @@ int Caller::run() {
   XMLInterface xmlInterface(xmlOutputFN_, xmlSchemaValidation_, 
                             xmlPrintDecoys_, xmlPrintExpMass_);
   SetHandler setHandler(maxPSMs_);
-  if (!tabInput_) {
-    if (VERB > 1) {
-      std::cerr << "Reading pin-xml input from datafile " << inputFN_ << std::endl;
-    }
-    success = xmlInterface.readPin(dataStream, inputFN_, setHandler, pCheck_, protEstimator_);
-  } else {
+  if (tabInput_) {
     if (VERB > 1) {
       std::cerr << "Reading tab-delimited input from datafile " << inputFN_ << std::endl;
     }
     success = setHandler.readTab(dataStream, pCheck_);
+  } else if (oswInput_) {
+    if (VERB > 1) {
+      std::cerr << "Reading OSW input from datafile " << inputFN_ << std::endl;
+    }
+    success = setHandler.readOSW(inputFN_, pCheck_);
+  } else {
+    if (VERB > 1) {
+      std::cerr << "Reading pin-xml input from datafile " << inputFN_ << std::endl;
+    }
+    success = xmlInterface.readPin(dataStream, inputFN_, setHandler, pCheck_, protEstimator_);
   }
   
   // Reading input files (pin or temporary file)
@@ -931,10 +948,12 @@ int Caller::run() {
     
     fileStream.clear();
     fileStream.seekg(0, ios::beg);
-    if (!tabInput_) {
-      success = xmlInterface.readAndScorePin(fileStream, rawWeights, allScores, inputFN_, setHandler, pCheck_, protEstimator_);
-    } else {
+    if (tabInput_) {
       success = setHandler.readAndScoreTab(fileStream, rawWeights, allScores, pCheck_);
+    } if (oswInput_) {
+      success = setHandler.readAndScoreTab(fileStream, rawWeights, allScores, pCheck_);
+    } else {
+      success = xmlInterface.readAndScorePin(fileStream, rawWeights, allScores, inputFN_, setHandler, pCheck_, protEstimator_);
     }
         
     // Reading input files (pin or temporary file)

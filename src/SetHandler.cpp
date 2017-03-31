@@ -108,6 +108,12 @@ int SetHandler::readTab(istream& dataStream, SanityCheck*& pCheck) {
   return readAndScoreTab(dataStream, noWeights, noScores, pCheck);
 }
 
+int SetHandler::readOSW(std::string inputFN_, SanityCheck*& pCheck) {
+  std::vector<double> noWeights;
+  Scores noScores(true);
+  return readAndScoreOSW(inputFN_, noWeights, noScores, pCheck);
+}
+
 int SetHandler::getOptionalFields(const std::string& headerLine, 
     std::vector<OptionalField>& optionalFields) {
   TabReader reader(headerLine);
@@ -501,6 +507,103 @@ int SetHandler::readAndScoreTab(istream& dataStream,
     if (hasDefaultValues) pCheck->addDefaultWeights(init_values); 
     pCheck->setConcatenatedSearch(concatenatedSearch);
   }
+  return 1;
+}
+
+int SetHandler::readAndScoreOSW(std::string inputFN_, 
+    std::vector<double>& rawWeights, Scores& allScores, SanityCheck*& pCheck) {
+
+  DataSet* targetSet = new DataSet();
+  assert(targetSet);
+  targetSet->setLabel(1);
+  DataSet* decoySet = new DataSet();
+  assert(decoySet);
+  decoySet->setLabel(-1);
+
+  sqlite3 *db;
+  sqlite3_stmt * stmt;
+  int  rc;
+  std::string select_sql;
+
+  // Open database
+  rc = sqlite3_open(inputFN_.c_str(), &db);
+  if ( rc )
+  {
+    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+  }
+
+  select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID;";
+
+  // Execute SQL select statement
+  sqlite3_prepare(db, select_sql.c_str(), -1, &stmt, NULL);
+  sqlite3_step( stmt );
+
+  int cols = sqlite3_column_count(stmt);
+
+  // Generate feature names
+  FeatureNames& featureNames = DataSet::getFeatureNames();
+  for (int i = 0; i < cols; i++)
+  {
+    if (string(sqlite3_column_name( stmt, i )).substr(0,4) == "VAR_")
+    {
+      featureNames.insertFeature(string(sqlite3_column_name( stmt, i )));
+    }
+  }
+  featureNames.initFeatures(DataSet::getCalcDoc());
+  featurePool_.createPool(DataSet::getNumFeatures());
+
+  // Generate features
+  while (sqlite3_column_type( stmt, 0 ) != SQLITE_NULL)
+  {
+    PSMDescription* myPsm = new PSMDescription();
+    bool decoy = 0;
+    double* featureRow = featurePool_.allocate();
+    myPsm->features = featureRow;
+    int j = 0;
+    for (int i = 0; i < cols; i++)
+    {
+      if (string(sqlite3_column_name( stmt, i )) == "PRECURSOR_ID")
+      {
+        myPsm->setId(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
+      }
+      if (string(sqlite3_column_name( stmt, i )) == "FEATURE_ID")
+      {
+        myPsm->scan = sqlite3_column_int( stmt, i );
+      }
+      if (string(sqlite3_column_name( stmt, i )) == "DECOY")
+      {
+        decoy = sqlite3_column_int( stmt, i );
+      }
+      if (string(sqlite3_column_name( stmt, i )).substr(0,4) == "VAR_")
+      {
+        featureRow[j] = sqlite3_column_double( stmt, i );
+        j++;
+      }
+    }
+
+    // Add feature to data set
+    if (decoy)
+    {
+      decoySet->registerPsm(myPsm);
+    }
+    else
+    {
+      targetSet->registerPsm(myPsm);
+    }
+
+    sqlite3_step( stmt );
+  }
+
+  sqlite3_finalize(stmt);
+  sqlite3_close(db);
+
+  push_back_dataset(targetSet);
+  push_back_dataset(decoySet);
+
+  pCheck = new SanityCheck();
+  pCheck->checkAndSetDefaultDir();
+  pCheck->setConcatenatedSearch(false);
+
   return 1;
 }
 

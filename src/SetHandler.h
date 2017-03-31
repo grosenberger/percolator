@@ -40,6 +40,8 @@
 #include "PseudoRandom.h"
 #include "DescriptionOfCorrect.h"
 #include "FeatureMemoryPool.h"
+#include "sqlite3.h"
+#include "PSMDescription.h"
 
 using namespace std;
 
@@ -73,7 +75,10 @@ class SetHandler {
   // Reads in tab delimited stream and returns a SanityCheck object based on
   // the presence of default weights. Returns 0 on error, 1 on success.
   int readTab(istream& dataStream, SanityCheck*& pCheck);
+  int readOSW(std::string inputFN_, SanityCheck*& pCheck);
   int readAndScoreTab(istream& dataStream, 
+    std::vector<double>& rawWeights, Scores& allScores, SanityCheck*& pCheck);
+  int readAndScoreOSW(std::string inputFN_, 
     std::vector<double>& rawWeights, Scores& allScores, SanityCheck*& pCheck);
   void addQueueToSets(std::priority_queue<PSMDescriptionPriority>& subsetPSMs,
     DataSet* targetSet, DataSet* decoySet);

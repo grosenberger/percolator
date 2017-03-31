@@ -36,6 +36,14 @@ if(XML_SUPPORT)
   
 endif(XML_SUPPORT)
 
+find_package(sqlite3 REQUIRED)
+if(SQLITE3_FOUND)
+  message(STATUS "Package SQLITE3 found: ${SQLITE3_INCLUDE_DIR}, ${SQLITE3_LIBRARIES}")
+else(SQLITE3_FOUND)
+  message(FATAL_ERROR "The package SQLITE3 has not been found")
+endif(SQLITE3_FOUND)  
+include_directories(${SQLITE3_INCLUDE_DIR})
+
 
 ###############################################################################
 # RUN CODESYNTHESIS
@@ -139,12 +147,12 @@ ELSE(CRUX)
    
   # SET LIBRARIES FOR PERCOLATOR
   if(MSVC)
-    target_link_libraries(percolator perclibrary fido picked_protein ${XERCESC_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES})
+    target_link_libraries(percolator perclibrary fido picked_protein ${XERCESC_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} ${SQLITE3_LIBRARIES})
   else(MSVC)
     if (APPLE)
-      target_link_libraries(percolator perclibrary fido picked_protein ${XERCESC_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} )
+      target_link_libraries(percolator perclibrary fido picked_protein ${XERCESC_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} ${SQLITE3_LIBRARIES})
     else(APPLE)
-      target_link_libraries(percolator perclibrary fido picked_protein ${XERCESC_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} stdc++)
+      target_link_libraries(percolator perclibrary fido picked_protein ${XERCESC_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CURL_LIBRARIES} stdc++ ${SQLITE3_LIBRARIES})
     endif (APPLE)
   endif()
    
