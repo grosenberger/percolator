@@ -178,6 +178,9 @@ class Scores {
   void setDOCFeatures(Normalizer* pNorm);
   
   void print(int label, std::ostream& os = std::cout);
+
+  static int callback(void *, int argc, char **argv, char **azColName);
+  void reportOSW(const string& dataFN);
   
   DescriptionOfCorrect& getDOC() { return doc_; }
   

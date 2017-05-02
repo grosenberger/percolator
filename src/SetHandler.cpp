@@ -576,7 +576,6 @@ int SetHandler::readAndScoreOSW(std::string inputFN_,
       }
       if (string(sqlite3_column_name( stmt, i )) == "MODIFIED_SEQUENCE")
       {
-        std::cout << std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))) << std::endl;
         myPsm->peptide = std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i )));
       }
       if (string(sqlite3_column_name( stmt, i )) == "DECOY")

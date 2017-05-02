@@ -251,6 +251,76 @@ void Scores::print(int label, std::ostream& os) {
 #endif
 }
 
+int Scores::callback(void * /* NotUsed */, int argc, char **argv, char **azColName) {
+  int i;
+  for(i=0; i<argc; i++)
+  {
+    printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+  }
+  printf("\n");
+  return(0);
+}
+
+void Scores::reportOSW(const string& dataFN) {
+  std::vector<ScoreHolder>::iterator scoreIt = scores_.begin();
+
+  std::vector<std::string> insert_sqls;
+  for ( ; scoreIt != scores_.end(); ++scoreIt)
+  {
+    std::stringstream insert_sql;
+
+    insert_sql << "INSERT INTO SCORE_MS2(FEATURE_ID, SCORE, QVALUE, PEP) VALUES (";
+    insert_sql <<  scoreIt->pPSM->getId() << ",";
+    insert_sql <<  scoreIt->score << ",";
+    insert_sql <<  scoreIt->q << ",";
+    insert_sql <<  scoreIt->pep << "); ";
+
+    insert_sqls.push_back(insert_sql.str());
+  }
+
+  // Conduct SQLite operations
+  sqlite3 *db;
+  char *zErrMsg = 0;
+  int  rc;
+
+  // Open database
+  rc = sqlite3_open(dataFN.c_str(), &db);
+  if( rc )
+  {
+    fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+  }
+
+  std::string create_sql;
+
+  create_sql =  "DROP TABLE IF EXISTS SCORE_MS2; " \
+                "CREATE TABLE SCORE_MS2(" \
+                "FEATURE_ID INT NOT NULL," \
+                "SCORE DOUBLE NOT NULL," \
+                "QVALUE DOUBLE NOT NULL," \
+                "PEP DOUBLE NOT NULL);";
+
+  // Execute SQL create statement
+  rc = sqlite3_exec(db, create_sql.c_str(), callback, 0, &zErrMsg);
+  if( rc != SQLITE_OK )
+  {
+    sqlite3_free(zErrMsg);
+  }
+
+  sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, &zErrMsg);
+
+  for (int i = 0; i < insert_sqls.size(); i++)
+  {
+    rc = sqlite3_exec(db, insert_sqls[i].c_str(), callback, 0, &zErrMsg);
+    if( rc != SQLITE_OK )
+    {
+      sqlite3_free(zErrMsg);
+    }
+  }
+
+  sqlite3_exec(db, "END TRANSACTION", NULL, NULL, &zErrMsg);
+  sqlite3_close(db);
+}
+
 void Scores::fillFeatures(SetHandler& setHandler) {
   scores_.clear();
   setHandler.fillFeatures(scores_,1);

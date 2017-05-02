@@ -488,6 +488,7 @@ bool Caller::parseOptions(int argc, char **argv) {
   if (cmd.optionSet("Q")) {
     tabInput_ = false;
     oswInput_ = true;
+    reportUniquePeptides_ = false;
     inputSearchType_ = "separate";
     inputFN_ = cmd.options["Q"];
     SanityCheck::setInitDefaultDirName("VAR_XCORR_SHAPE");
@@ -710,16 +711,23 @@ void Caller::calculatePSMProb(Scores& allScores, bool isUniquePeptideRun,
     decoyFN = decoyPsmResultFN_;
   }
   
-  if (!targetFN.empty()) {
-    ofstream targetStream(targetFN.c_str(), ios::out);
-    allScores.print(NORMAL, targetStream);
-  } else if (writeOutput) {
-    allScores.print(NORMAL);
+  if (oswInput_) {
+    allScores.reportOSW(inputFN_);
   }
-  if (!decoyFN.empty()) {
-    ofstream decoyStream(decoyFN.c_str(), ios::out);
-    allScores.print(SHUFFLED, decoyStream);
+
+  else {
+    if (!targetFN.empty()) {
+      ofstream targetStream(targetFN.c_str(), ios::out);
+      allScores.print(NORMAL, targetStream);
+    } else if (writeOutput) {
+      allScores.print(NORMAL);
+    }
+    if (!decoyFN.empty()) {
+      ofstream decoyStream(decoyFN.c_str(), ios::out);
+      allScores.print(SHUFFLED, decoyStream);
+    }
   }
+
 }
 
 /** 
