@@ -261,19 +261,61 @@ int Scores::callback(void * /* NotUsed */, int argc, char **argv, char **azColNa
   return(0);
 }
 
-void Scores::reportOSW(const string& dataFN) {
+void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
+  std::string table;
+  std::string create_sql;
+
+  if (oswLevel == "MS1") {
+    table = "SCORE_MS1";
+    create_sql =  "DROP TABLE IF EXISTS " + table + "; " \
+                  "CREATE TABLE " + table + "(" \
+                  "FEATURE_ID INT NOT NULL," \
+                  "SCORE DOUBLE NOT NULL," \
+                  "QVALUE DOUBLE NOT NULL," \
+                  "PEP DOUBLE NOT NULL);";
+
+  } else if (oswLevel == "T") {
+    table = "SCORE_TRANSITION";
+    create_sql =  "DROP TABLE IF EXISTS " + table + "; " \
+                  "CREATE TABLE " + table + "(" \
+                  "FEATURE_ID INT NOT NULL," \
+                  "TRANSITION_ID INT NOT NULL," \
+                  "SCORE DOUBLE NOT NULL," \
+                  "QVALUE DOUBLE NOT NULL," \
+                  "PEP DOUBLE NOT NULL);";
+
+  } else {
+    table = "SCORE_MS2";
+    create_sql =  "DROP TABLE IF EXISTS " + table + "; " \
+                  "CREATE TABLE " + table + "(" \
+                  "FEATURE_ID INT NOT NULL," \
+                  "SCORE DOUBLE NOT NULL," \
+                  "QVALUE DOUBLE NOT NULL," \
+                  "PEP DOUBLE NOT NULL);";
+  }
+
   std::vector<ScoreHolder>::iterator scoreIt = scores_.begin();
 
   std::vector<std::string> insert_sqls;
   for ( ; scoreIt != scores_.end(); ++scoreIt)
   {
     std::stringstream insert_sql;
-
-    insert_sql << "INSERT INTO SCORE_MS2(FEATURE_ID, SCORE, QVALUE, PEP) VALUES (";
-    insert_sql <<  scoreIt->pPSM->getId() << ",";
-    insert_sql <<  scoreIt->score << ",";
-    insert_sql <<  scoreIt->q << ",";
-    insert_sql <<  scoreIt->pep << "); ";
+    if (oswLevel == "T") {
+      insert_sql << "INSERT INTO " << table;
+      insert_sql << " (FEATURE_ID, TRANSITION_ID, SCORE, QVALUE, PEP) VALUES (";
+      insert_sql <<  scoreIt->pPSM->getId() << ",";
+      insert_sql <<  scoreIt->score << ",";
+      insert_sql <<  scoreIt->q << ",";
+      insert_sql <<  scoreIt->pep << "); ";
+    }
+    else {
+      insert_sql << "INSERT INTO " << table;
+      insert_sql << " (FEATURE_ID, SCORE, QVALUE, PEP) VALUES (";
+      insert_sql <<  scoreIt->pPSM->getId() << ",";
+      insert_sql <<  scoreIt->score << ",";
+      insert_sql <<  scoreIt->q << ",";
+      insert_sql <<  scoreIt->pep << "); ";
+    }
 
     insert_sqls.push_back(insert_sql.str());
   }
@@ -289,15 +331,6 @@ void Scores::reportOSW(const string& dataFN) {
   {
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
   }
-
-  std::string create_sql;
-
-  create_sql =  "DROP TABLE IF EXISTS SCORE_MS2; " \
-                "CREATE TABLE SCORE_MS2(" \
-                "FEATURE_ID INT NOT NULL," \
-                "SCORE DOUBLE NOT NULL," \
-                "QVALUE DOUBLE NOT NULL," \
-                "PEP DOUBLE NOT NULL);";
 
   // Execute SQL create statement
   rc = sqlite3_exec(db, create_sql.c_str(), callback, 0, &zErrMsg);

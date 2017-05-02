@@ -73,6 +73,7 @@ class Caller {
   // file input parameters
   bool tabInput_;
   bool oswInput_;
+  std::string oswLevel_;
   bool readStdIn_;
   std::string inputFN_;
   bool xmlSchemaValidation_;

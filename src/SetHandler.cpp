@@ -108,10 +108,10 @@ int SetHandler::readTab(istream& dataStream, SanityCheck*& pCheck) {
   return readAndScoreTab(dataStream, noWeights, noScores, pCheck);
 }
 
-int SetHandler::readOSW(std::string inputFN_, SanityCheck*& pCheck) {
+int SetHandler::readOSW(std::string inputFN_, std::string oswLevel_, SanityCheck*& pCheck) {
   std::vector<double> noWeights;
   Scores noScores(true);
-  return readAndScoreOSW(inputFN_, noWeights, noScores, pCheck);
+  return readAndScoreOSW(inputFN_, oswLevel_, noWeights, noScores, pCheck);
 }
 
 int SetHandler::getOptionalFields(const std::string& headerLine, 
@@ -510,7 +510,7 @@ int SetHandler::readAndScoreTab(istream& dataStream,
   return 1;
 }
 
-int SetHandler::readAndScoreOSW(std::string inputFN_, 
+int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_, 
     std::vector<double>& rawWeights, Scores& allScores, SanityCheck*& pCheck) {
 
   DataSet* targetSet = new DataSet();
@@ -535,8 +535,14 @@ int SetHandler::readAndScoreOSW(std::string inputFN_,
   // Peak group-level query
   // select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID;";
 
-  // Peak group-level query including peptide sequence
-  select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
+  if (oswLevel_ == "MS1") {
+    select_sql = "SELECT *, PRECURSOR.ID AS GROUP_ID FROM FEATURE_MS1 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
+  } else if (oswLevel_ == "T") {
+    select_sql = "SELECT *, FEATURE_ID || ',' || TRANSITION_ID AS GROUP_ID FROM FEATURE_TRANSITION INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_TRANSITION.FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM TRANSITION) AS TRANSITION ON FEATURE_TRANSITION.TRANSITION_ID = TRANSITION.ID ORDER BY FEATURE_ID, PRECURSOR_ID, TRANSITION_ID;";
+  } else {
+    // Peak group-level query including peptide sequence
+    select_sql = "SELECT *, PRECURSOR.ID AS GROUP_ID FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
+  }
 
   // Execute SQL select statement
   sqlite3_prepare(db, select_sql.c_str(), -1, &stmt, NULL);
@@ -563,10 +569,11 @@ int SetHandler::readAndScoreOSW(std::string inputFN_,
     bool decoy = 0;
     double* featureRow = featurePool_.allocate();
     myPsm->features = featureRow;
+
     int j = 0;
     for (int i = 0; i < cols; i++)
     {
-      if (string(sqlite3_column_name( stmt, i )) == "PRECURSOR_ID")
+      if (string(sqlite3_column_name( stmt, i )) == "GROUP_ID")
       {
         myPsm->setId(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
       }

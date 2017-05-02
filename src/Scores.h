@@ -180,7 +180,7 @@ class Scores {
   void print(int label, std::ostream& os = std::cout);
 
   static int callback(void *, int argc, char **argv, char **azColName);
-  void reportOSW(const string& dataFN);
+  void reportOSW(const string& dataFN, const string& oswLevel);
   
   DescriptionOfCorrect& getDOC() { return doc_; }
   
