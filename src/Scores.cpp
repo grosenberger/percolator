@@ -303,7 +303,7 @@ void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
     if (oswLevel == "T") {
       insert_sql << "INSERT INTO " << table;
       insert_sql << " (FEATURE_ID, TRANSITION_ID, SCORE, QVALUE, PEP) VALUES (";
-      insert_sql <<  scoreIt->pPSM->getId() << ",";
+      insert_sql <<  scoreIt->pPSM->getFeatureId() << ",";
       insert_sql <<  scoreIt->score << ",";
       insert_sql <<  scoreIt->q << ",";
       insert_sql <<  scoreIt->pep << "); ";
@@ -311,7 +311,7 @@ void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
     else {
       insert_sql << "INSERT INTO " << table;
       insert_sql << " (FEATURE_ID, SCORE, QVALUE, PEP) VALUES (";
-      insert_sql <<  scoreIt->pPSM->getId() << ",";
+      insert_sql <<  scoreIt->pPSM->getFeatureId() << ",";
       insert_sql <<  scoreIt->score << ",";
       insert_sql <<  scoreIt->q << ",";
       insert_sql <<  scoreIt->pep << "); ";

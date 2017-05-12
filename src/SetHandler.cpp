@@ -563,9 +563,12 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
   featurePool_.createPool(DataSet::getNumFeatures());
 
   // Generate features
+  int k = 0;
   while (sqlite3_column_type( stmt, 0 ) != SQLITE_NULL)
   {
     PSMDescription* myPsm = new PSMDescription();
+    myPsm->scan = k;
+
     bool decoy = 0;
     double* featureRow = featurePool_.allocate();
     myPsm->features = featureRow;
@@ -579,7 +582,7 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
       }
       if (string(sqlite3_column_name( stmt, i )) == "FEATURE_ID")
       {
-        myPsm->scan = sqlite3_column_int( stmt, i );
+        myPsm->setFeatureId(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
       }
       if (string(sqlite3_column_name( stmt, i )) == "MODIFIED_SEQUENCE")
       {
@@ -607,6 +610,7 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
     }
 
     sqlite3_step( stmt );
+    k++;
   }
 
   sqlite3_finalize(stmt);
