@@ -269,7 +269,7 @@ void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
     table = "SCORE_MS1";
     create_sql =  "DROP TABLE IF EXISTS " + table + "; " \
                   "CREATE TABLE " + table + "(" \
-                  "FEATURE_ID INT NOT NULL," \
+                  "FEATURE_ID TEXT NOT NULL," \
                   "SCORE DOUBLE NOT NULL," \
                   "QVALUE DOUBLE NOT NULL," \
                   "PEP DOUBLE NOT NULL);";
@@ -278,8 +278,8 @@ void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
     table = "SCORE_TRANSITION";
     create_sql =  "DROP TABLE IF EXISTS " + table + "; " \
                   "CREATE TABLE " + table + "(" \
-                  "FEATURE_ID INT NOT NULL," \
-                  "TRANSITION_ID INT NOT NULL," \
+                  "FEATURE_ID TEXT NOT NULL," \
+                  "TRANSITION_ID TEXT NOT NULL," \
                   "SCORE DOUBLE NOT NULL," \
                   "QVALUE DOUBLE NOT NULL," \
                   "PEP DOUBLE NOT NULL);";
@@ -288,7 +288,7 @@ void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
     table = "SCORE_MS2";
     create_sql =  "DROP TABLE IF EXISTS " + table + "; " \
                   "CREATE TABLE " + table + "(" \
-                  "FEATURE_ID INT NOT NULL," \
+                  "FEATURE_ID TEXT NOT NULL," \
                   "SCORE DOUBLE NOT NULL," \
                   "QVALUE DOUBLE NOT NULL," \
                   "PEP DOUBLE NOT NULL);";
