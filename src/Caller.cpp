@@ -496,7 +496,7 @@ bool Caller::parseOptions(int argc, char **argv) {
     inputSearchType_ = "separate";
     inputFN_ = cmd.options["OI"];
     oswLevel_ = cmd.options["OL"];
-    SanityCheck::setInitDefaultDirName("VAR_XCORR_SHAPE");
+    // SanityCheck::setInitDefaultDirName("VAR_INTENSITY_SCORE");
   }
   
   if (cmd.optionSet("e")) {

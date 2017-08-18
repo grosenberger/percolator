@@ -78,6 +78,9 @@ class PSMDescription {
 
   virtual inline void setFeatureId(const std::string& feature_id) { feature_id_ = feature_id; }
   virtual inline std::string& getFeatureId() { return feature_id_; }
+
+  virtual inline void setTransitionId(const std::string& transition_id) { transition_id_ = transition_id; }
+  virtual inline std::string& getTransitionId() { return transition_id_; }
   
   // Virtual functions for PSMDescriptionDOC
   virtual std::string& getFullPeptide() { return peptide; }
@@ -124,6 +127,7 @@ class PSMDescription {
   unsigned int scan;
   std::string id_;
   std::string feature_id_;
+  std::string transition_id_;
   std::string peptide;
   std::vector<std::string> proteinIds;
 };

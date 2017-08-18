@@ -536,12 +536,12 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
   // select_sql = "SELECT * FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID;";
 
   if (oswLevel_ == "MS1") {
-    select_sql = "SELECT *, PRECURSOR.ID AS GROUP_ID FROM FEATURE_MS1 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
+    select_sql = "SELECT *, PRECURSOR.ID || '_' || RUN_ID AS GROUP_ID FROM FEATURE_MS1 INNER JOIN (SELECT ID, PRECURSOR_ID, RUN_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
   } else if (oswLevel_ == "T") {
-    select_sql = "SELECT *, FEATURE_ID || ',' || TRANSITION_ID AS GROUP_ID FROM FEATURE_TRANSITION INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_TRANSITION.FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM TRANSITION) AS TRANSITION ON FEATURE_TRANSITION.TRANSITION_ID = TRANSITION.ID ORDER BY FEATURE_ID, PRECURSOR_ID, TRANSITION_ID;";
+    select_sql = "SELECT *, FEATURE_ID || '_' || TRANSITION_ID AS GROUP_ID FROM FEATURE_TRANSITION INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_TRANSITION.FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM TRANSITION) AS TRANSITION ON FEATURE_TRANSITION.TRANSITION_ID = TRANSITION.ID ORDER BY FEATURE_ID, PRECURSOR_ID, TRANSITION_ID;";
   } else {
     // Peak group-level query including peptide sequence
-    select_sql = "SELECT *, PRECURSOR.ID AS GROUP_ID FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
+    select_sql = "SELECT *, PRECURSOR.ID || '_' || RUN_ID AS GROUP_ID FROM FEATURE_MS2 INNER JOIN (SELECT ID, PRECURSOR_ID, RUN_ID FROM FEATURE) AS FEATURE ON FEATURE_ID = FEATURE.ID INNER JOIN (SELECT ID, DECOY FROM PRECURSOR) AS PRECURSOR ON FEATURE.PRECURSOR_ID = PRECURSOR.ID INNER JOIN PRECURSOR_PEPTIDE_MAPPING ON PRECURSOR.ID = PRECURSOR_PEPTIDE_MAPPING.PRECURSOR_ID INNER JOIN (SELECT ID, MODIFIED_SEQUENCE FROM PEPTIDE) AS PEPTIDE ON PRECURSOR_PEPTIDE_MAPPING.PEPTIDE_ID = PEPTIDE.ID;";
   }
 
   // Execute SQL select statement
@@ -564,10 +564,10 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
 
   // Generate features
   int k = 0;
+  std::vector<std::string> group_id_index;
   while (sqlite3_column_type( stmt, 0 ) != SQLITE_NULL)
   {
     PSMDescription* myPsm = new PSMDescription();
-    myPsm->scan = k;
 
     bool decoy = 0;
     double* featureRow = featurePool_.allocate();
@@ -578,11 +578,23 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
     {
       if (string(sqlite3_column_name( stmt, i )) == "GROUP_ID")
       {
-        myPsm->setId(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
+        if (std::find(group_id_index.begin(), group_id_index.end(), std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i )))) != group_id_index.end())
+        {
+          myPsm->scan = std::find(group_id_index.begin(), group_id_index.end(), std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i )))) - group_id_index.begin();
+        }
+        else
+        {
+          group_id_index.push_back(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
+          myPsm->scan = std::find(group_id_index.begin(), group_id_index.end(), std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i )))) - group_id_index.begin();
+        }
       }
       if (string(sqlite3_column_name( stmt, i )) == "FEATURE_ID")
       {
         myPsm->setFeatureId(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
+      }
+      if (string(sqlite3_column_name( stmt, i )) == "TRANSITION_ID")
+      {
+        myPsm->setTransitionId(std::string(reinterpret_cast<const char*>(sqlite3_column_text( stmt, i ))));
       }
       if (string(sqlite3_column_name( stmt, i )) == "MODIFIED_SEQUENCE")
       {
@@ -610,7 +622,6 @@ int SetHandler::readAndScoreOSW(std::string inputFN_, std::string oswLevel_,
     }
 
     sqlite3_step( stmt );
-    k++;
   }
 
   sqlite3_finalize(stmt);

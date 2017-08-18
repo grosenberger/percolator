@@ -302,16 +302,17 @@ void Scores::reportOSW(const string& dataFN, const string& oswLevel) {
     std::stringstream insert_sql;
     if (oswLevel == "T") {
       insert_sql << "INSERT INTO " << table;
-      insert_sql << " (FEATURE_ID, TRANSITION_ID, SCORE, QVALUE, PEP) VALUES (";
-      insert_sql <<  scoreIt->pPSM->getId() << ","; // Note: Id already contains merged FEATURE_ID and TRANSITION_ID.
+      insert_sql << " (FEATURE_ID, TRANSITION_ID, SCORE, QVALUE, PEP) VALUES ('";
+      insert_sql <<  scoreIt->pPSM->getFeatureId() << "','";
+      insert_sql <<  scoreIt->pPSM->getTransitionId() << "',";
       insert_sql <<  scoreIt->score << ",";
       insert_sql <<  scoreIt->q << ",";
       insert_sql <<  scoreIt->pep << "); ";
     }
     else {
       insert_sql << "INSERT INTO " << table;
-      insert_sql << " (FEATURE_ID, SCORE, QVALUE, PEP) VALUES (";
-      insert_sql <<  scoreIt->pPSM->getFeatureId() << ",";
+      insert_sql << " (FEATURE_ID, SCORE, QVALUE, PEP) VALUES ('";
+      insert_sql <<  scoreIt->pPSM->getFeatureId() << "',";
       insert_sql <<  scoreIt->score << ",";
       insert_sql <<  scoreIt->q << ",";
       insert_sql <<  scoreIt->pep << "); ";
